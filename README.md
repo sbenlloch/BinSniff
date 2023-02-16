@@ -52,7 +52,7 @@ BinSniff supports a variety of features, including: (CHANGE TO REALISTIC FEATURE
 ## Contributing
 
 If you find a bug or have a feature request, please [open an issue](https://github.com/sg1o/binsniff/issues).
-If you would like to contribute to the development of BinSniff, please [fork the repository](https://github.com/binsniff/binsniff/fork) and submit a pull request.
+If you would like to contribute to the development of BinSniff, please **fork the repository** and submit a pull request.
 
 ## License
 
