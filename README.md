@@ -13,27 +13,27 @@ and identify important characteristics such as file format, headers, function ca
 
 BinSniff can be installed on Linux, macOS or Windows using WSL.
 To install it, simply clone the repo and run septup.pu installation.
-'''
+```
 pip install -e .
-'''
+```
 
 ## Usage
 
 To use BinSniff, open a terminal or command prompt and navigate to the directory where you extracted the files.
 Then, run the `binsniff` command followed by the path to the binary file you want to analyze. For example:
 
-'''
+```
 $ binsniff /path/to/binary.exe
-'''
+```
 
 
 BinSniff will extract the default features from the binary file and display them in the terminal.
 You can also specify which features you want to extract by using the `--features`
 option followed by a comma-separated list of feature names. For example:
 
-'''
+```
 $ binsniff /path/to/binary.exe --features=format,headers,functions
-'''
+```
 
 This will extract the file format, headers, and function calls from the binary file.
 
@@ -52,7 +52,7 @@ BinSniff supports a variety of features, including: (CHANGE TO REALISTIC FEATURE
 ## Contributing
 
 If you find a bug or have a feature request, please [open an issue](https://github.com/sg1o/binsniff/issues).
-If you would like to contribute to the development of BinSniff, please [fork the repository](https://github.com/binsniff/binsniff/fork) and submit a pull request.
+If you would like to contribute to the development of BinSniff, please **fork the repository** and submit a pull request.
 
 ## License
 
