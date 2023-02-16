@@ -33,7 +33,7 @@ option followed by a comma-separated list of feature names. For example:
 
 ```
 $ binsniff /path/to/binary.exe --features=format,headers,functions
-``
+```
 
 This will extract the file format, headers, and function calls from the binary file.
 
