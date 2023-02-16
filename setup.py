@@ -11,6 +11,6 @@ setup(
     description='',
     install_requires=requirements,
     entry_points=dict(console_scripts=[
-        'binsniff = src.__init__:main'
+        'binsniff = binsniff.__init__:main'
     ])
 )
