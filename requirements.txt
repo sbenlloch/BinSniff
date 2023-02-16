@@ -1,0 +1,4 @@
+angr==9.2.38
+pyelftools==0.29
+pynvim==0.4.3   # For development purpose
+ipython==8.10.0 # For development purpose
