@@ -371,8 +371,14 @@ def elfparse(binary) -> dict:
 
     return features
 
-def elfsecparse(binary):
+def elfsecparse(binary) -> dict:
     """
+    Parse file to get security mitigations applied to ELF.
+    Args:
+        binary (str): Path of the ELF file to parse.
+
+    Returns:
+        dict: A dictionary containing all features related to security mitigations.
     """
 
     sec = ELF(binary, checksec = False)

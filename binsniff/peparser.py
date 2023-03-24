@@ -4,6 +4,20 @@ import base64
 import pefile
 
 def peparse(filepath) -> dict:
+    """
+    Feature extraction for PE files
+
+    Extraction of features from an PE file. The function retrieves
+    information from the file header, optional header, and diferent sections.
+
+    Args:
+        binary (str): Path of the PE file to parse.
+
+    Returns:
+        dict: A dictionary containing all the extracted features.
+
+    """
+
     pe = pefile.PE(filepath)
 
     # Extracting basic PE header information

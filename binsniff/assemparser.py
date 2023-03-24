@@ -231,7 +231,7 @@ def assemparse(binary) -> dict:
     features["INTELLIGENCE"]["IPs"] = extract_ips(strings)
 
     # Get CFG
-    cfg = project.analyses.CFGFast(normalize = True)
+    cfg = project.analyses.CFGFast(normalize = True, show_progressbar = True)
     features["INSTS_STATS" ] = extract_program_instruction_features(cfg)
     # Function feature extraction
     features["FUNCTIONS"] = []

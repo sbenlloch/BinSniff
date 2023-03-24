@@ -1,6 +1,6 @@
-from elfparser import elfparse, elfsecparse
-from peparser import peparse
-from assemparser import assemparse
+from .elfparser import elfparse, elfsecparse
+from .peparser import peparse
+from .assemparser import assemparse
 
 import IPython
 import json
@@ -92,6 +92,26 @@ def magic(binary):
 
 class BinSniff():
     """
+    A class for extracting features from binary files and dumping them as a JSON file.
+
+    Args:
+        binary (str): The path to the binary file.
+        output (str): The path to the directory where the JSON file will be saved.
+        output_name (str, optional): The name of the JSON file to be saved. Defaults to "features.json".
+        verbosity (int, optional): The verbosity level. A higher level means more output. Defaults to 0.
+
+    Raises:
+        Exception: If the `binary` file does not exist.
+
+    Methods:
+        list_features() -> list:
+            Returns a list of the available features extracted from the binary file.
+
+        extract_features() -> dict:
+            Extracts the features from the binary file and returns them as a dictionary.
+
+        dump_json():
+            Dumps the extracted features as a JSON file to the specified directory.
 
     """
     def __init__(
@@ -100,8 +120,18 @@ class BinSniff():
             output,
             output_name = "features.json",
             verbosity = 0,
+            hardcode = {},
             ):
+        """
+        Initializes the `BinSniff` instance.
 
+        Args:
+            binary (str): The path to the binary file.
+            output (str): The path to the directory where the JSON file will be saved.
+            output_name (str, optional): The name of the JSON file to be saved. Defaults to "features.json".
+            verbosity (int, optional): The verbosity level. A higher level means more output. Defaults to 0.
+            hardcode (dict, optional): Dictionary to harcode options in the features
+        """
         if not os.path.isfile(binary):
             print("[!] File not exists")
             raise Exception("File not exists")
@@ -111,22 +141,37 @@ class BinSniff():
         self.name = os.path.basename(binary)
 
         self.features = {}
+        self.hardcode = hardcode
 
         self.output_name = output_name
         os.makedirs(output, exist_ok=True)
         self.output = output
 
     def list_features(self) -> list:
+        """
+        Returns a list of the available features extracted from the binary file.
+
+        Returns:
+            list: A list of strings containing the available features.
+        """
+
         if not self.features:
             self.extract_features()
 
         return list(self.features.keys())
 
     def extract_features(self) -> dict:
+        """
+        Extracts the features from the binary file and returns them as a dictionary.
+
+        Returns:
+            dict: A dictionary containing the extracted features.
+        """
+
 
         if self.features:
             return self.features
-
+        self.features = self.hardcode
         self.features["NAME"] = self.name
         self.features["MD5"] = md5(self.binary)
         self.features["SHA256"] = sha256(self.binary)
@@ -146,19 +191,21 @@ class BinSniff():
             try:
                 self.features["TYPE"] = "PE"
                 self.features["STATIC"] = peparse(self.binary)
-            except Exception as e:
+            except:
                 raise Exception("Error trying feature extraction in PE file")
 
 
         try:
             self.features["CODE"] = assemparse(self.binary)
-        except Exception as e:
-            IPython.embed()
+        except:
             raise Exception("File not compatible with Angr")
 
         return self.features
 
     def dump_json(self):
+        """
+        Dumps the extracted features as a JSON file to the specified directory.
+        """
         if not self.features:
             self.extract_features()
 
