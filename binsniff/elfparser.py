@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-from elftools import __version__
 from elftools.elf.elffile import ELFFile
 from elftools.elf.dynamic import DynamicSection
 from elftools.elf.enums import ENUM_D_TAG
