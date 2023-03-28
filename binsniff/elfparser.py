@@ -1,7 +1,9 @@
-from elftools.elf.elffile import ELFFile
-from elftools.elf.dynamic import DynamicSection
-from elftools.elf.enums import ENUM_D_TAG
+import elftools
 from elftools.elf.segments import InterpSegment
+from elftools.elf.dynamic import DynamicSection
+from elftools.elf.constants import SH_FLAGS
+from elftools.elf.enums import ENUM_D_TAG
+from elftools.elf.elffile import ELFFile
 from elftools.elf.sections import (
     NoteSection, SymbolTableSection)
 from elftools.elf.descriptions import (
@@ -12,9 +14,10 @@ from elftools.elf.descriptions import (
     describe_symbol_type, describe_symbol_bind, describe_note,
     describe_symbol_other
     )
-from elftools.elf.constants import SH_FLAGS
 
 from pwn import ELF
+import math
+from .utils import _log
 
 def file_header(file, out=False) -> dict:
     """
@@ -38,7 +41,10 @@ def file_header(file, out=False) -> dict:
     # ABI Version
     abiversion = e_ident["EI_ABIVERSION"]
     # Object file type
-    e_type = describe_e_type(header["e_type"], elffile)
+    try:
+        e_type = describe_e_type(header["e_type"], elffile)
+    except:
+        e_type = "<Unknown>"
     # Required Architecture
     e_machine = describe_e_machine(header["e_machine"])
     # Object file version
@@ -203,63 +209,69 @@ def dynamic_section(file) -> dict:
     dynamic_section["HAS_DYNAMIC_SECTION"] = False
     dynamic_section["SHARED_LIBRARIES"] = []
     dynamic_section["LIBRARIES_SONAME"] = []
+    try:
+        for section in elffile.iter_sections():
+            if not isinstance(section, DynamicSection):
+                continue
 
-    for section in elffile.iter_sections():
-        if not isinstance(section, DynamicSection):
-            continue
+            dynamic_section["HAS_DYNAMIC_SECTION"] = True
+            dynamic_section[f"DYNAMIC_SECTION_OFFSET"] = section["sh_offset"]
+            dynamic_section[f"NUMBER_DYNAMIC_TAGS"] = section.num_tags()
 
-        dynamic_section["HAS_DYNAMIC_SECTION"] = True
-        dynamic_section[f"DYNAMIC_SECTION_OFFSET"] = section["sh_offset"]
-        dynamic_section[f"NUMBER_DYNAMIC_TAGS"] = section.num_tags()
+            tags = []
+            for tag in section.iter_tags():
 
-        tags = []
-        for tag in section.iter_tags():
+                # SWITCH
+                match tag.entry.d_tag:
+                    case "DT_NEEDED":
+                        dynamic_section["SHARED_LIBRARIES"].append(tag.needed)
+                        parsed = {"SHARED_LIBRARY" : tag.needed}
 
-            # SWITCH
-            match tag.entry.d_tag:
-                case "DT_NEEDED":
-                    dynamic_section["SHARED_LIBRARIES"].append(tag.needed)
-                    parsed = {"SHARED_LIBRARY" : tag.needed}
+                    case "DT_RPATH":
+                        parsed = { "LIBRARY_RPATH" : tag.rpath }
 
-                case "DT_RPATH":
-                    parsed = { "LIBRARY_RPATH" : tag.rpath }
+                    case "DT_RUNPATH":
+                        parsed = { "LIBRARY_RUNPATH" : tag.runpath }
 
-                case "DT_RUNPATH":
-                    parsed = { "LIBRARY_RUNPATH" : tag.runpath }
+                    case "DT_SONAME":
+                        dynamic_section["LIBRARIES_SONAME"].append(tag.soname)
+                        parsed = { "LIBRARY_SONAME" : tag.soname }
 
-                case "DT_SONAME":
-                    dynamic_section["LIBRARIES_SONAME"].append(tag.soname)
-                    parsed = { "LIBRARY_SONAME" : tag.soname }
+                    case "DT_FLAGS":
+                        parsed = tag.entry.d_val
 
-                case "DT_FLAGS":
-                    parsed = tag.entry.d_val
+                    case "DT_FLAGS_1":
+                        parsed = tag.entry.d_val
 
-                case "DT_FLAGS_1":
-                    parsed = tag.entry.d_val
+                    case "DT_PLTREL":
+                        parsed = tag.entry.d_val
 
-                case "DT_PLTREL":
-                    parsed = tag.entry.d_val
+                    case "DT_MIPS_FLAGS":
+                        parsed = tag.entry.d_val
+                    case "DT_MIPS_SYMTABNO":
+                        parsed = tag.entry.d_val
 
-                case "DT_MIPS_FLAGS":
-                    parsed = tag.entry.d_val
-                case "DT_MIPS_SYMTABNO":
-                    parsed = tag.entry.d_val
+                    case "DT_MIPS_LOCAL_GOTNO":
+                        parsed = tag.entry.d_val
 
-                case "DT_MIPS_LOCAL_GOTNO":
-                    parsed = tag.entry.d_val
+                    case _:
+                        parsed = tag["d_val"]
 
-                case _:
-                    parsed = tag["d_val"]
+                value = ENUM_D_TAG.get(tag.entry.d_tag, tag.entry.d_tag)
+                tagtype = tag.entry.d_tag[3:]
+                tags.append({
+                                "VALUE"    : value,
+                                "TAG_TYPE" : tagtype,
+                                "CONTENT"     : parsed,
+                            })
 
-            value = ENUM_D_TAG.get(tag.entry.d_tag, tag.entry.d_tag)
-            tagtype = tag.entry.d_tag[3:]
-            tags.append({
-                            "VALUE"    : value,
-                            "TAG_TYPE" : tagtype,
-                            "CONTENT"     : parsed,
-                        })
 
-        dynamic_section[f"DYNAMIC_TAGS"] = tags
+            dynamic_section[f"DYNAMIC_TAGS"] = tags
+
+    except AttributeError:
+        _log("W", "Skipping dynamic sections")
+        pass
+
 
     return dynamic_section
 
@@ -293,12 +305,14 @@ def symbol_tables(file) -> dict:
         for symbol in section.iter_symbols():
 
             symbol_name = symbol.name
-            if ( symbol["st_info"]["type"] == "STT_SECTION"  and
-                 symbol["st_shndx"] < elffile.num_sections() and
-                 symbol["st_name"] == 0
-               ):
-                symbol_name = elffile.get_section(symbol["st_shndx"]).name
-
+            try:
+                if ( symbol["st_info"]["type"] == "STT_SECTION"  and
+                    symbol["st_shndx"] < elffile.num_sections() and
+                    symbol["st_name"] == 0
+                ):
+                    symbol_name = elffile.get_section(symbol["st_shndx"]).name
+            except:
+                pass
 
             dyn["SYMBOLS"].append({
                                     "NAME"     : symbol_name,
@@ -335,6 +349,44 @@ def notes(file) -> dict:
 
     return notes
 
+def entropy(data) -> float:
+
+    freq_dict = {}
+    file_size = 0
+    ent = 0.0
+
+    # Calculate frequency of each byte
+    for byte in data:
+        freq_dict[byte] = freq_dict.get(byte, 0) + 1
+        file_size += 1
+
+    # Calculate entropy
+    for count in freq_dict.values():
+        probability = count / file_size
+        ent -= probability * math.log2(probability)
+
+    return ent
+
+
+def section_entropy(file) -> dict:
+    """
+    Calculate the entropy of each section of a binary file.
+
+    Args:
+        file: file descriptor with the binary.
+
+    Returns:
+        dict: A dictionary with the entropy of each section.
+    """
+    elf = ELFFile(file)
+
+    entropies = {}
+    for section in elf.iter_sections():
+        section_data = section.data()
+        if section_data:
+            entropies[section.name] = entropy(section_data)
+
+    return entropies
 
 def elfparse(binary) -> dict:
     """
@@ -358,12 +410,16 @@ def elfparse(binary) -> dict:
     features = {}
     with open(binary, "rb") as file:
         try:
+            features["ENTROPIES"] = section_entropy(file)
             features.update(file_header(file))
             features.update(section_headers(file))
             features.update(program_headers(file))
             features.update(dynamic_section(file))
             features.update(symbol_tables(file))
             features.update(notes(file))
+        except elftools.common.exceptions.ELFParseError:
+            _log("W", "ELFParseError catched")
+            return features
         except:
             raise Exception("ELF file extraction failure")
 
@@ -378,14 +434,18 @@ def elfsecparse(binary) -> dict:
     Returns:
         dict: A dictionary containing all features related to security mitigations.
     """
+    try:
+        sec = ELF(binary, checksec = False)
 
-    sec = ELF(binary, checksec = False)
+        return {
+            "Arch": sec.arch,
+            "RELRO": sec.relro,
+            "Stack": sec.canary,
+            "NX": sec.nx,
+            "PIE": sec.pie,
+            "FORTIFY": sec.fortify
+        }
 
-    return {
-        "Arch": sec.arch,
-        "RELRO": sec.relro,
-        "Stack": sec.canary,
-        "NX": sec.nx,
-        "PIE": sec.pie,
-        "FORTIFY": sec.fortify
-    }
+    except:
+        _log("W", "Pwnlib parsing error, returning empty dictionary")
+        return {}

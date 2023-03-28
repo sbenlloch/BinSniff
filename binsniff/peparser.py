@@ -1,7 +1,45 @@
 import hashlib
+import math
 import base64
 
 import pefile
+
+def entropy(data) -> float:
+    freq_dict = {}
+    file_size = 0
+    ent = 0.0
+
+    # Calculate frequency of each byte
+    for byte in data:
+        freq_dict[byte] = freq_dict.get(byte, 0) + 1
+        file_size += 1
+
+    # Calculate entropy
+    for count in freq_dict.values():
+        probability = count / file_size
+        ent -= probability * math.log2(probability)
+
+    return ent
+
+
+def section_entropy(binary_path: str) -> dict:
+    """
+    Calculate the entropy of each section of a binary file.
+
+    Args:
+        binary_path (str): The path to the binary file.
+
+    Returns:
+        dict: A dictionary with the entropy of each section.
+    """
+    pe = pefile.PE(binary_path)
+
+    entropies = {}
+    for section in pe.sections:
+        section_data = section.get_data()
+        entropies[section.Name.decode().rstrip('\x00')] = entropy(section_data)
+
+    return entropies
 
 def peparse(filepath) -> dict:
     """
@@ -71,10 +109,10 @@ def peparse(filepath) -> dict:
     sections = []
     for section in pe.sections:
         section_data = {
-            "name": section.Name.decode().rstrip('\x00'),
+            "name": str(section.Name.decode().rstrip('\x00')),
             "virtual_address": hex(section.VirtualAddress),
-            "virtual_size": section.Misc_VirtualSize,
-            "raw_size": section.SizeOfRawData,
+            "virtual_size": str(section.Misc_VirtualSize),
+            "raw_size": str(section.SizeOfRawData),
             "raw_data_offset": hex(section.PointerToRawData),
             "characteristics": hex(section.Characteristics)
         }
@@ -82,23 +120,34 @@ def peparse(filepath) -> dict:
 
     # Extracting import table information
     import_table = []
-    for entry in pe.DIRECTORY_ENTRY_IMPORT:
-        import_data = {
-            "dll_name": entry.dll.decode().rstrip('\x00'),
-            "imports": []
-        }
-        for imp in entry.imports:
-            import_data["imports"].append(imp.name.decode().rstrip('\x00'))
-        import_table.append(import_data)
+    if hasattr(pe, "DIRECTORY_ENTRY_IMPORT"):
+        for entry in pe.DIRECTORY_ENTRY_IMPORT:
+            import_data = {
+                "dll_name": str(entry.dll.decode().rstrip('\x00')),
+                "imports": []
+            }
+            for imp in entry.imports:
+                if imp.name is None:
+                    continue
+                import_data["imports"].append(str(imp.name.decode().rstrip('\x00')))
+            import_table.append(import_data)
 
     # Extracting export table information
     export_table = []
     if hasattr(pe, 'DIRECTORY_ENTRY_EXPORT'):
         for entry in pe.DIRECTORY_ENTRY_EXPORT.symbols:
+            if entry.name is None:
+                export_data = {
+                    "name": None,
+                    "address": hex(entry.address),
+                    "ordinal": str(entry.ordinal)
+                }
+                continue
+
             export_data = {
-                "name": entry.name.decode().rstrip('\x00'),
+                "name": str(entry.name.decode().rstrip('\x00')),
                 "address": hex(entry.address),
-                "ordinal": entry.ordinal
+                "ordinal": str(entry.ordinal)
             }
             export_table.append(export_data)
 
@@ -115,17 +164,17 @@ def peparse(filepath) -> dict:
                             data_hash = hashlib.md5(data).hexdigest()
                             try:
                                 resource_data = {
-                                    "type": resource_type.name,
-                                    "name": resource_id.name,
-                                    "language": resource_lang.name,
+                                    "type": str(resource_type.name),
+                                    "name": str(resource_id.name),
+                                    "language": str(resource_lang.name),
                                     "data": data.decode("utf-8"),
                                     "hash_data" : data_hash,
                                 }
                             except:
                                 resource_data = {
-                                    "type": resource_type.name,
-                                    "name": resource_id.name,
-                                    "language": resource_lang.name,
+                                    "type": str(resource_type.name),
+                                    "name": str(resource_id.name),
+                                    "language": str(resource_lang.name),
                                     "data": base64.b64encode(data).decode("utf-8"),
                                     "hash" : data_hash,
                                     }
@@ -133,12 +182,13 @@ def peparse(filepath) -> dict:
 
     # Creating dictionary with all the extracted information
     features = {
+        "ENTROPIES" : section_entropy(filepath),
         "HEADER": header,
         "OPTIONAL_HEADER": optional_header,
         "SECTIONS": sections,
         "IMPORT_TABLE": import_table,
         "EXPORT_TABLE": export_table,
-        "RESOURCES": resources
+        "RESOURCES": resources,
     }
 
     return features

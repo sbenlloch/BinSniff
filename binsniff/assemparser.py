@@ -6,7 +6,8 @@ import hashlib
 import re
 
 import angr
-import IPython
+
+from .utils import _log
 
 import logging
 logging.getLogger('angr').setLevel(logging.CRITICAL)
@@ -231,7 +232,21 @@ def assemparse(binary) -> dict:
     features["INTELLIGENCE"]["IPs"] = extract_ips(strings)
 
     # Get CFG
-    cfg = project.analyses.CFGFast(normalize = True, show_progressbar = True)
+    try:
+        cfg = project.analyses.CFGFast(normalize = True, show_progressbar = True)
+    except angr.errors.AngrCFGError:
+        _log("W", "AngrCFGError catched, returning only STRINGS features")
+        return features
+    except RecursionError:
+        _log("W", "RecursionError  catched, returning STRINGS features")
+        return features
+    except AssertionError:
+        _log("W", "AssertionError  catched, returning STRINGS features")
+        return features
+    except AttributeError:
+        _log("W", "AttributeError catched, returning STRINGS features")
+        return features
+
     features["INSTS_STATS" ] = extract_program_instruction_features(cfg)
     # Function feature extraction
     features["FUNCTIONS"] = []
