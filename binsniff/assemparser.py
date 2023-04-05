@@ -10,12 +10,13 @@ import angr
 from .utils import _log
 
 import logging
-logging.getLogger('angr').setLevel(logging.CRITICAL)
-logging.getLogger('claripy').setLevel(logging.CRITICAL)
-logging.getLogger('cle').setLevel(logging.CRITICAL)
-logging.getLogger('archinfo').setLevel(logging.CRITICAL)
-logging.getLogger('ailment').setLevel(logging.CRITICAL)
-logging.getLogger('pyvex').setLevel(logging.CRITICAL)
+loggers = logging.Logger.manager.loggerDict
+
+# Set logging level for all loggers to CRITICAL + 1
+for logger in loggers.values():
+    if isinstance(logger, logging.Logger):
+        logger.setLevel(logging.CRITICAL + 1)
+
 
 def get_assembly_code(func, debug=False) -> Tuple[list[str], str]:
 
@@ -237,14 +238,8 @@ def assemparse(binary) -> dict:
     except angr.errors.AngrCFGError:
         _log("W", "AngrCFGError catched, returning only STRINGS features")
         return features
-    except RecursionError:
-        _log("W", "RecursionError  catched, returning STRINGS features")
-        return features
-    except AssertionError:
-        _log("W", "AssertionError  catched, returning STRINGS features")
-        return features
-    except AttributeError:
-        _log("W", "AttributeError catched, returning STRINGS features")
+    except Exception as e:
+        _log("E", f"{type(e).__name__} catched, returning only STRINGS features")
         return features
 
     features["INSTS_STATS" ] = extract_program_instruction_features(cfg)

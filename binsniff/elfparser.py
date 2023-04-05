@@ -16,6 +16,15 @@ from elftools.elf.descriptions import (
     )
 
 from pwn import ELF
+
+import logging
+loggers = logging.Logger.manager.loggerDict
+
+# Set logging level for all loggers to CRITICAL + 1
+for logger in loggers.values():
+    if isinstance(logger, logging.Logger):
+        logger.setLevel(logging.CRITICAL + 1)
+
 import math
 from .utils import _log
 
