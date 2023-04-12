@@ -397,7 +397,7 @@ def section_entropy(file) -> dict:
 
     return entropies
 
-def elfparse(binary) -> dict:
+def elfparse(binary) -> tuple[dict, bool]:
     """
     Feature extraction for ELF files
 
@@ -427,14 +427,14 @@ def elfparse(binary) -> dict:
             features.update(symbol_tables(file))
             features.update(notes(file))
         except elftools.common.exceptions.ELFParseError:
-            _log("W", "ELFParseError catched")
-            return features
+            _log("W", "ELFParseError caught")
+            return (features, True)
         except:
             raise Exception("ELF file extraction failure")
 
-    return features
+    return (features, False)
 
-def elfsecparse(binary) -> dict:
+def elfsecparse(binary) -> tuple[dict, bool]:
     """
     Parse file to get security mitigations applied to ELF.
     Args:
@@ -446,15 +446,15 @@ def elfsecparse(binary) -> dict:
     try:
         sec = ELF(binary, checksec = False)
 
-        return {
+        return ({
             "Arch": sec.arch,
             "RELRO": sec.relro,
             "Stack": sec.canary,
             "NX": sec.nx,
             "PIE": sec.pie,
             "FORTIFY": sec.fortify
-        }
+        }, False)
 
     except:
         _log("W", "Pwnlib parsing error, returning empty dictionary")
-        return {}
+        return ({}, True)

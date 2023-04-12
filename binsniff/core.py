@@ -121,6 +121,7 @@ class BinSniff():
             output_name = "features.json",
             verbosity = 0,
             hardcode = {},
+            timeout=None,
             ):
         """
         Initializes the `BinSniff` instance.
@@ -131,6 +132,7 @@ class BinSniff():
             output_name (str, optional): The name of the JSON file to be saved. Defaults to "features.json".
             verbosity (int, optional): The verbosity level. A higher level means more output. Defaults to 0.
             hardcode (dict, optional): Dictionary to harcode options in the features
+            timeout (int/None, optional): max time to perform CFG, if is None not timeout aplied
         """
         if not os.path.isfile(binary):
             print("[!] File not exists")
@@ -147,6 +149,8 @@ class BinSniff():
         os.makedirs(output, exist_ok=True)
         self.output = output
 
+        self.timeout = timeout
+
     def list_features(self) -> list:
         """
         Returns a list of the available features extracted from the binary file.
@@ -160,7 +164,7 @@ class BinSniff():
 
         return list(self.features.keys())
 
-    def extract_features(self) -> dict:
+    def extract_features(self) -> tuple[dict, bool]:
         """
         Extracts the features from the binary file and returns them as a dictionary.
 
@@ -168,6 +172,11 @@ class BinSniff():
             dict: A dictionary containing the extracted features.
         """
 
+        # Error variables to get posible errors
+        errorassemparse = False
+        errorelfparse = False
+        errorsecparse = False
+        errorpeparse = False
 
         if self.features:
             return self.features
@@ -182,33 +191,37 @@ class BinSniff():
         if "ELF" in self.features["MAGIC"]:
             try:
                 self.features["TYPE"] = "ELF"
-                self.features["STATIC"] = elfparse(self.binary)
-                self.features["MITIGATIONS"] = elfsecparse(self.binary)
+                (self.features["STATIC"], errorelfparse) = elfparse(self.binary)
+                (self.features["MITIGATIONS"], errorsecparse) = elfsecparse(self.binary)
             except:
-                raise Exception("Error trying feature extraction in ELF file")
+                errorelfparse = True
 
         elif "PE" in self.features["MAGIC"]:
             try:
                 self.features["TYPE"] = "PE"
                 self.features["STATIC"] = peparse(self.binary)
             except:
-                raise Exception("Error trying feature extraction in PE file")
+                errorpeparse = True
 
 
         try:
-            self.features["CODE"] = assemparse(self.binary)
+            (self.features["CODE"], errorassemparse) = assemparse(self.binary, self.timeout)
         except:
-            raise Exception("File not compatible with Angr")
+            errorassemparse = True
 
-        return self.features
+        errors = errorassemparse or errorelfparse or errorpeparse or errorsecparse
+        return (self.features, errors)
 
     def dump_json(self):
         """
         Dumps the extracted features as a JSON file to the specified directory.
         """
+        ret = (None, False)
         if not self.features:
-            self.extract_features()
+            ret = self.extract_features()
 
         with open(f"{self.output}/{self.output_name}", "w") as file:
             features = json.dumps(self.features, indent = 4)
             file.write(features)
+
+        return ret

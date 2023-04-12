@@ -1,8 +1,8 @@
-from typing import Tuple
 import collections
 import datetime
 import binascii
 import hashlib
+import signal
 import re
 
 import angr
@@ -18,7 +18,7 @@ for logger in loggers.values():
         logger.setLevel(logging.CRITICAL + 1)
 
 
-def get_assembly_code(func, debug=False) -> Tuple[list[str], str]:
+def get_assembly_code(func, debug=False) -> tuple[list[str], str]:
 
     asm = []
 
@@ -205,7 +205,30 @@ def extract_years(strings) -> list:
 
     return list(years)
 
-def assemparse(binary) -> dict:
+
+class TimeoutError(Exception):
+    pass
+
+def _timed_cfg(binary_path, timeout):
+
+    def handler(signum, frame):
+        raise TimeoutError("CFG timed out")
+
+    signal.signal(signal.SIGALRM, handler)
+    signal.alarm(timeout)
+
+    project = angr.Project(binary_path, auto_load_libs=False)
+    cfg = project.analyses.CFGFast(normalize=True, show_progressbar=True)
+
+    signal.alarm(0)
+
+    return cfg
+
+def get_timed_cfg(timeout, binary):
+    cfg = _timed_cfg(binary, timeout)
+    return cfg
+
+def assemparse(binary, timeout) -> tuple[dict, bool]:
     """
     Extract features from binary using Angr.
 
@@ -213,8 +236,9 @@ def assemparse(binary) -> dict:
 
     Args:
         binary (str): Path of the Binary file to parse.
+        timeout (int): Max seconds to perform CFG
 
-    Return:
+
         dict: A dictionary containing all the extracted features.
     """
 
@@ -234,13 +258,22 @@ def assemparse(binary) -> dict:
 
     # Get CFG
     try:
-        cfg = project.analyses.CFGFast(normalize = True, show_progressbar = True)
+        if timeout is None:
+            cfg = project.analyses.CFGFast(normalize = True, show_progressbar = True)
+        else:
+            cfg = get_timed_cfg(timeout, binary)
+
+        if cfg is None:
+            raise Exception
     except angr.errors.AngrCFGError:
-        _log("W", "AngrCFGError catched, returning only STRINGS features")
-        return features
+        _log("W", "AngrCFGError caught, returning only STRINGS features")
+        return (features, True)
+    except TimeoutError:
+        _log("E", "Timeout in CFG caught, returning only STRINGS features")
+        return (features, True)
     except Exception as e:
-        _log("E", f"{type(e).__name__} catched, returning only STRINGS features")
-        return features
+        _log("E", f"{type(e).__name__} caught, returning only STRINGS features")
+        return (features, True)
 
     features["INSTS_STATS" ] = extract_program_instruction_features(cfg)
     # Function feature extraction
@@ -257,4 +290,4 @@ def assemparse(binary) -> dict:
 
         features["FUNCTIONS"].append(foo_feature)
 
-    return features
+    return (features, False)
