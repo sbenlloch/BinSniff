@@ -96,7 +96,7 @@ for file in os.listdir(input_folder):
     _log("S", "Dumped file")
 
     if error:
-        _log("E", "Discarding binary, deleting output folder")
+        _log("E", "Dropping, deleting output folder")
         if arguments.discard:
             shutil.rmtree(actual_output)
             errorfile = open("errors.txt", "a")
