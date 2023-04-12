@@ -19,6 +19,12 @@ parser.add_argument("-o", "--output-folder", required=True, dest="output",
 parser.add_argument("--hard",
                     help = "JSON file to be used as a hardcoded dictionary")
 
+parser.add_argument("-t", "--time", default=None,
+                    help = "Set timeout to get CFG")
+
+parser.add_argument("-d", "--discard", default = False, action='store_true',
+                    help = "Discard errored binaries and write path in error.txt file")
+
 arguments = parser.parse_args()
 
 def _log(tag, text):
@@ -41,6 +47,10 @@ Hierarchy of folders
 # Preparing Environment
 input_folder = os.path.abspath(arguments.input)
 output_folder = os.path.abspath(arguments.output)
+
+timeout = None
+if arguments.time is not None:
+    timeout = int(arguments.time)
 
 hardcode = {}
 if arguments.hard:
@@ -78,12 +88,21 @@ for file in os.listdir(input_folder):
     if not os.path.isfile(f"{actual_output}/{file}"):
         shutil.copy(absfile, f"{actual_output}/{file}")
 
-    sniffer = BinSniff(absfile, actual_output, hardcode = hardcode)
+    sniffer = BinSniff(absfile, actual_output, hardcode = hardcode, timeout=timeout)
 
     # Dump json
     _log("W", "Parsing file")
-    sniffer.dump_json()
+    (_, error) = sniffer.dump_json()
     _log("S", "Dumped file")
+
+    if error:
+        _log("E", "Discarding binary, deleting output folder")
+        if arguments.discard:
+            shutil.rmtree(actual_output)
+            errorfile = open("errors.txt", "a")
+            errorfile.write(f"{file}\n")
+            errorfile.close()
+            continue
 
     # Get list of keys
     keys = sniffer.list_features()
