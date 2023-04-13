@@ -225,8 +225,11 @@ def _timed_cfg(binary_path, timeout):
     return cfg
 
 def get_timed_cfg(timeout, binary):
-    cfg = _timed_cfg(binary, timeout)
-    return cfg
+    try:
+        cfg = _timed_cfg(binary, timeout)
+        return cfg
+    except:
+        raise Exception("CFG timeout")
 
 
 def assemparse(binary, timeout) -> tuple[dict, bool]:
