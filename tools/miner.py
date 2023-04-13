@@ -16,11 +16,11 @@ def _log(tag, text):
     symbols = {'W': '⚠', 'E': '✖', 'S': '✔', 'I': 'ℹ'}
     print(colors[tag] + symbols[tag] + " " + text + "\033[0m")
 
-def handle_sigint(signal, frame):
-    _log("W", "User interrupted the script with Ctrl+C.")
+def handle_signal(signal, frame):
+    _log("W", "User interrupted the script with Ctrl+\\.")
     sys.exit(0)
 
-signal.signal(signal.SIGINT, handle_sigint)
+signal.signal(signal.SIGQUIT, handle_signal)
 
 parser = argparse.ArgumentParser()
 
@@ -185,6 +185,15 @@ for file in os.listdir(input_folder):
         errorvault.append(file)
         errorfile = open("errors.txt", "a")
         errorfile.write(f"Timeout error: {file}\n")
+        errorfile.close()
+        continue
+
+    except KeyboardInterrupt:
+        _log("E", f"Continue to next file")
+        shutil.rmtree(actual_output)
+        errorvault.append(file)
+        errorfile = open("errors.txt", "a")
+        errorfile.write(f"Jumped: {file}\n")
         errorfile.close()
         continue
 
