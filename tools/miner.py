@@ -62,6 +62,20 @@ if arguments.hard:
 
 _log("I", f"Dictionary to harcode: {hardcode}")
 
+def check_if_errored(errors, file):
+    for error in errors:
+        if file in error:
+            return True
+
+    return False
+
+errorvault = []
+if arguments.discard:
+    if os.path.isfile("errors.txt"):
+        errorfile = open("errors.txt", "r")
+        errorvault = [x for x in errorfile]
+        errorfile.close()
+
 if not os.path.exists(output_folder):
     _log("E", "Output folder not exists")
     sys.exit()
@@ -69,6 +83,10 @@ if not os.path.exists(output_folder):
 _log("I", f"Start sniffing in {input_folder}")
 
 for file in os.listdir(input_folder):
+
+    if arguments.discard and check_if_errored(errorvault, file):
+        _log("W", f"{file} in history of errors")
+        continue
 
     _log("I", f"Sniffing {file}")
     absfile = os.path.join(input_folder, file)
@@ -88,26 +106,40 @@ for file in os.listdir(input_folder):
     if not os.path.isfile(f"{actual_output}/{file}"):
         shutil.copy(absfile, f"{actual_output}/{file}")
 
-    sniffer = BinSniff(absfile, actual_output, hardcode = hardcode, timeout=timeout)
+    # Error in BinSniff will be caught
 
-    # Dump json
-    _log("W", "Parsing file")
-    (_, error) = sniffer.dump_json()
-    _log("S", "Dumped file")
+    try:
+        sniffer = BinSniff(absfile, actual_output, hardcode = hardcode, timeout=timeout)
 
-    if error:
-        _log("E", "Dropping, deleting output folder")
-        if arguments.discard:
-            shutil.rmtree(actual_output)
-            errorfile = open("errors.txt", "a")
-            errorfile.write(f"{file}\n")
-            errorfile.close()
-            continue
+        # Dump json
+        _log("W", "Parsing file")
+        (_, error) = sniffer.dump_json()
+        _log("S", "Dumped file")
 
-    # Get list of keys
-    keys = sniffer.list_features()
-    _log("W", "Writing keys file")
-    with open(f"{actual_output}/keys.txt", "w") as keys_file:
-        keys_file.write("\n".join(keys))
+        if error:
+            _log("E", "Dropping, deleting output folder")
+            if arguments.discard:
+                errorvault.append(file)
+                shutil.rmtree(actual_output)
+                errorfile = open("errors.txt", "a")
+                errorfile.write(f"{file}\n")
+                errorfile.close()
+                continue
 
-    _log("S", f"End with {file}")
+        # Get list of keys
+        keys = sniffer.list_features()
+        _log("W", "Writing keys file")
+        with open(f"{actual_output}/keys.txt", "w") as keys_file:
+            keys_file.write("\n".join(keys))
+
+        _log("S", f"End with {file}")
+
+    except Exception as e:
+        _log("E", f"Caught error in Miner: {e}")
+        shutil.rmtree(actual_output)
+        errorvault.append(file)
+        errorfile = open("errors.txt", "a")
+        errorfile.write(f"Especial error {e}: {file}\n")
+        errorfile.close()
+        continue
+
