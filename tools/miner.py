@@ -2,11 +2,25 @@
 
 from binsniff import BinSniff
 
+import multiprocessing
 import argparse
 import shutil
+import signal
 import json
 import sys
 import os
+
+def _log(tag, text):
+
+    colors = {'W': '\033[33m', 'E': '\033[31m', 'S': '\033[32m', 'I': '\033[36m'}
+    symbols = {'W': '⚠', 'E': '✖', 'S': '✔', 'I': 'ℹ'}
+    print(colors[tag] + symbols[tag] + " " + text + "\033[0m")
+
+def handle_sigint(signal, frame):
+    _log("W", "User interrupted the script with Ctrl+C.")
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, handle_sigint)
 
 parser = argparse.ArgumentParser()
 
@@ -26,13 +40,6 @@ parser.add_argument("-d", "--discard", default = False, action='store_true',
                     help = "Discard errored binaries and write path in error.txt file")
 
 arguments = parser.parse_args()
-
-def _log(tag, text):
-
-    colors = {'W': '\033[33m', 'E': '\033[31m', 'S': '\033[32m', 'I': '\033[36m'}
-    symbols = {'W': '⚠', 'E': '✖', 'S': '✔', 'I': 'ℹ'}
-    print(colors[tag] + symbols[tag] + " " + text + "\033[0m")
-
 
 """
 Hierarchy of folders
@@ -82,6 +89,25 @@ if not os.path.exists(output_folder):
 
 _log("I", f"Start sniffing in {input_folder}")
 
+
+def sniffing(timeout, file, hardcode, output, conn):
+    try:
+
+        sniffer = BinSniff(file, output, hardcode = hardcode, timeout=timeout)
+
+        # Dump json
+        _log("W", "Parsing file")
+        (_, error) = sniffer.dump_json()
+        _log("S", "Dumped file")
+        # Get list of keys
+        keys = sniffer.list_features()
+
+        conn.send((error, keys))
+
+    except Exception as e:
+        # Send the exception back to the parent process
+        conn.send_exception(e)
+
 for file in os.listdir(input_folder):
 
     if arguments.discard and check_if_errored(errorvault, file):
@@ -109,12 +135,33 @@ for file in os.listdir(input_folder):
     # Error in BinSniff will be caught
 
     try:
-        sniffer = BinSniff(absfile, actual_output, hardcode = hardcode, timeout=timeout)
+        # Set up a pipe for communicating with the child process
+        parent_conn, child_conn = multiprocessing.Pipe()
 
-        # Dump json
-        _log("W", "Parsing file")
-        (_, error) = sniffer.dump_json()
-        _log("S", "Dumped file")
+        # Launch the sniffing function in a subprocess
+        sniffing_process = multiprocessing.Process(target=sniffing,
+                                                    args=(
+                                                            timeout,
+                                                            absfile,
+                                                            hardcode,
+                                                            actual_output,
+                                                            child_conn))
+        sniffing_process.start()
+
+        # Wait for the subprocess to finish or time out
+        if timeout:
+            sniffing_process.join(timeout + 3)
+        else:
+            sniffing_process.join()
+
+        if sniffing_process.is_alive():
+            # The subprocess is still running, terminate it
+            sniffing_process.terminate()
+            sniffing_process.join()
+            raise TimeoutError("The sniffing process timed out.")
+
+        # Get the return values from the pipe
+        error, keys = parent_conn.recv()
 
         if error:
             _log("E", "Dropping, deleting output folder")
@@ -126,13 +173,20 @@ for file in os.listdir(input_folder):
                 errorfile.close()
                 continue
 
-        # Get list of keys
-        keys = sniffer.list_features()
         _log("W", "Writing keys file")
         with open(f"{actual_output}/keys.txt", "w") as keys_file:
             keys_file.write("\n".join(keys))
 
         _log("S", f"End with {file}")
+
+    except TimeoutError as e:
+        _log("E", f"The sniffing process timed out: {e}")
+        shutil.rmtree(actual_output)
+        errorvault.append(file)
+        errorfile = open("errors.txt", "a")
+        errorfile.write(f"Timeout error: {file}\n")
+        errorfile.close()
+        continue
 
     except Exception as e:
         _log("E", f"Caught error in Miner: {e}")
@@ -142,4 +196,5 @@ for file in os.listdir(input_folder):
         errorfile.write(f"Especial error {e}: {file}\n")
         errorfile.close()
         continue
+
 
