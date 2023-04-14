@@ -104,9 +104,9 @@ def sniffing(timeout, file, hardcode, output, conn):
 
         conn.send((error, keys))
 
-    except Exception as e:
+    except Exception:
         # Send the exception back to the parent process
-        conn.send_exception(e)
+        conn.send((True, None))
 
 for file in os.listdir(input_folder):
 
