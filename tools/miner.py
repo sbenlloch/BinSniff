@@ -10,6 +10,8 @@ import json
 import sys
 import os
 
+KILL = False
+
 def _log(tag, text):
 
     colors = {'W': '\033[33m', 'E': '\033[31m', 'S': '\033[32m', 'I': '\033[36m'}
@@ -17,8 +19,9 @@ def _log(tag, text):
     print(colors[tag] + symbols[tag] + " " + text + "\033[0m")
 
 def handle_signal(signal, frame):
-    _log("W", "User interrupted the script with Ctrl+\\.")
-    sys.exit(0)
+    global KILL
+    _log("W", "User interrupted the script with Ctrl+\\. End with actual binary.")
+    KILL = True
 
 signal.signal(signal.SIGQUIT, handle_signal)
 
@@ -109,6 +112,9 @@ def sniffing(timeout, file, hardcode, output, conn):
         conn.send((True, None))
 
 for file in os.listdir(input_folder):
+
+    if KILL:
+        break
 
     if arguments.discard and check_if_errored(errorvault, file):
         _log("W", f"{file} in history of errors")
