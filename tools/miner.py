@@ -106,10 +106,17 @@ def sniffing(timeout, file, hardcode, output, conn):
         keys = sniffer.list_features()
 
         conn.send((error, keys))
+        return 0
 
     except Exception:
         # Send the exception back to the parent process
         conn.send((True, None))
+
+    return 1
+
+wrong = 0
+done = 0
+debug = True
 
 for file in os.listdir(input_folder):
 
@@ -118,6 +125,8 @@ for file in os.listdir(input_folder):
 
     if arguments.discard and check_if_errored(errorvault, file):
         _log("W", f"{file} in history of errors")
+        wrong+=1
+        debug=True
         continue
 
     absfile = os.path.join(input_folder, file)
@@ -129,9 +138,15 @@ for file in os.listdir(input_folder):
         _log("I", "Creating output folder")
         os.makedirs(actual_output, exist_ok=True)
 
-    if os.path.isfile(f"{actual_output}/features.json"):
+    if os.path.isfile(f"{actual_output}/keys.txt"):
         _log("W", f"{actual_output} exists. Continue to next target")
+        done+=1
+        debug=True
         continue
+
+    if debug:
+        _log("S", f"Done: {done} Wrong: {wrong}")
+        debug = False
 
     _log("I", f"Sniffing {file}")
 
@@ -168,27 +183,35 @@ for file in os.listdir(input_folder):
             sniffing_process.join()
             raise TimeoutError("The sniffing process timed out.")
 
-        # Get the return values from the pipe
-        error, keys = parent_conn.recv()
+        if sniffing_process.exitcode != 0:
+            error = True
+            keys = []
+        else:
+            # Get the return values from the pipe
+            error, keys = parent_conn.recv()
 
         if error:
-            _log("E", "Dropping, deleting output folder")
+            debug=True
             if arguments.discard:
+                _log("E", "Dropping, deleting output folder")
                 errorvault.append(file)
                 shutil.rmtree(actual_output)
                 errorfile = open("errors.txt", "a")
                 errorfile.write(f"{file}\n")
                 errorfile.close()
-                continue
+            continue
 
         _log("W", "Writing keys file")
         with open(f"{actual_output}/keys.txt", "w") as keys_file:
             keys_file.write("\n".join(keys))
 
         _log("S", f"End with {file}")
+        done+=1
 
     except TimeoutError as e:
         _log("E", f"The sniffing process timed out: {e}")
+        debug=True
+        wrong+=1
         shutil.rmtree(actual_output)
         errorvault.append(file)
         errorfile = open("errors.txt", "a")
@@ -206,6 +229,8 @@ for file in os.listdir(input_folder):
             pass
 
         _log("E", f"Continue to next file")
+        debug=True
+        wrong+=1
         shutil.rmtree(actual_output)
         errorvault.append(file)
         errorfile = open("errors.txt", "a")
@@ -214,6 +239,8 @@ for file in os.listdir(input_folder):
         continue
 
     except Exception as e:
+        debug=True
+        wrong+=1
         _log("E", f"Caught error in Miner: {e}")
         shutil.rmtree(actual_output)
         errorvault.append(file)
