@@ -120,25 +120,27 @@ for file in os.listdir(input_folder):
         _log("W", f"{file} in history of errors")
         continue
 
-    _log("I", f"Sniffing {file}")
     absfile = os.path.join(input_folder, file)
 
     # Create destination folder
-    _log("I", "Creating output folder")
     actual_output = f"{output_folder}/{file}"
 
     if not os.path.exists(actual_output):
+        _log("I", "Creating output folder")
         os.makedirs(actual_output, exist_ok=True)
 
     if os.path.isfile(f"{actual_output}/features.json"):
         _log("W", f"{actual_output} exists. Continue to next target")
         continue
 
+    _log("I", f"Sniffing {file}")
+
     # Copy file to destination folder
     if not os.path.isfile(f"{actual_output}/{file}"):
         shutil.copy(absfile, f"{actual_output}/{file}")
 
     # Error in BinSniff will be caught
+    sniffing_process = None
 
     try:
         # Set up a pipe for communicating with the child process
@@ -195,6 +197,14 @@ for file in os.listdir(input_folder):
         continue
 
     except KeyboardInterrupt:
+
+        try:
+            if sniffing_process is not None and sniffing_process.is_alive():
+                sniffing_process.terminate()
+                sniffing_process.join()
+        except:
+            pass
+
         _log("E", f"Continue to next file")
         shutil.rmtree(actual_output)
         errorvault.append(file)
