@@ -192,6 +192,7 @@ for file in os.listdir(input_folder):
 
         if error:
             debug=True
+            wrong+=1
             if arguments.discard:
                 _log("E", "Dropping, deleting output folder")
                 errorvault.append(file)
