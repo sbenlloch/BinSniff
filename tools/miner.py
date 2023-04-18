@@ -20,7 +20,7 @@ def _log(tag, text):
 
 def handle_signal(signal, frame):
     global KILL
-    _log("W", "User interrupted the script with Ctrl+\\. End with actual binary.")
+    _log("W", "User interrupted the script with Ctrl+\\. Finishes with current binary.")
     KILL = True
 
 signal.signal(signal.SIGQUIT, handle_signal)
@@ -101,7 +101,7 @@ def sniffing(timeout, file, hardcode, output, conn):
         # Dump json
         _log("W", "Parsing file")
         (_, error) = sniffer.dump_json()
-        _log("S", "Dumped file")
+        _log("S", "File dumped")
         # Get list of keys
         keys = sniffer.list_features()
 
@@ -132,14 +132,14 @@ for file in os.listdir(input_folder):
     absfile = os.path.join(input_folder, file)
 
     # Create destination folder
-    actual_output = f"{output_folder}/{file}"
+    current_output = f"{output_folder}/{file}"
 
-    if not os.path.exists(actual_output):
+    if not os.path.exists(current_output):
         _log("I", "Creating output folder")
-        os.makedirs(actual_output, exist_ok=True)
+        os.makedirs(current_output, exist_ok=True)
 
-    if os.path.isfile(f"{actual_output}/keys.txt"):
-        _log("W", f"{actual_output} exists. Continue to next target")
+    if os.path.isfile(f"{current_output}/keys.txt"):
+        _log("W", f"{current_output} exists. Continue to next target")
         done+=1
         debug=True
         continue
@@ -151,8 +151,8 @@ for file in os.listdir(input_folder):
     _log("I", f"Sniffing {file}")
 
     # Copy file to destination folder
-    if not os.path.isfile(f"{actual_output}/{file}"):
-        shutil.copy(absfile, f"{actual_output}/{file}")
+    if not os.path.isfile(f"{current_output}/{file}"):
+        shutil.copy(absfile, f"{current_output}/{file}")
 
     # Error in BinSniff will be caught
     sniffing_process = None
@@ -167,7 +167,7 @@ for file in os.listdir(input_folder):
                                                             timeout,
                                                             absfile,
                                                             hardcode,
-                                                            actual_output,
+                                                            current_output,
                                                             child_conn))
         sniffing_process.start()
 
@@ -194,26 +194,26 @@ for file in os.listdir(input_folder):
             debug=True
             wrong+=1
             if arguments.discard:
-                _log("E", "Dropping, deleting output folder")
+                _log("E", "Dropping and deleting output folder")
                 errorvault.append(file)
-                shutil.rmtree(actual_output)
+                shutil.rmtree(current_output)
                 errorfile = open("errors.txt", "a")
                 errorfile.write(f"{file}\n")
                 errorfile.close()
             continue
 
         _log("W", "Writing keys file")
-        with open(f"{actual_output}/keys.txt", "w") as keys_file:
+        with open(f"{current_output}/keys.txt", "w") as keys_file:
             keys_file.write("\n".join(keys))
 
-        _log("S", f"End with {file}")
+        _log("S", f"Finished with {file}")
         done+=1
 
     except TimeoutError as e:
         _log("E", f"The sniffing process timed out: {e}")
         debug=True
         wrong+=1
-        shutil.rmtree(actual_output)
+        shutil.rmtree(current_output)
         errorvault.append(file)
         errorfile = open("errors.txt", "a")
         errorfile.write(f"Timeout error: {file}\n")
@@ -232,7 +232,7 @@ for file in os.listdir(input_folder):
         _log("E", f"Continue to next file")
         debug=True
         wrong+=1
-        shutil.rmtree(actual_output)
+        shutil.rmtree(current_output)
         errorvault.append(file)
         errorfile = open("errors.txt", "a")
         errorfile.write(f"Jumped: {file}\n")
@@ -243,7 +243,7 @@ for file in os.listdir(input_folder):
         debug=True
         wrong+=1
         _log("E", f"Caught error in Miner: {e}")
-        shutil.rmtree(actual_output)
+        shutil.rmtree(current_output)
         errorvault.append(file)
         errorfile = open("errors.txt", "a")
         errorfile.write(f"Especial error {e}: {file}\n")
