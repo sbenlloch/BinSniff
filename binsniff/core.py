@@ -196,9 +196,13 @@ class BinSniff():
             except:
                 errorelfparse = True
 
-        elif "PE" in self.features["MAGIC"]:
+        elif "PE" in self.features["MAGIC"] or "MZ" in self.features["MAGIC"]:
             try:
-                self.features["TYPE"] = "PE"
+                if "PE" in self.features["MAGIC"]:
+                    self.features["TYPE"] = "PE"
+                if "PE" not in self.features["MAGIC"]:
+                    self.features["TYPE"] = "MZ"
+
                 self.features["STATIC"] = peparse(self.binary)
             except:
                 errorpeparse = True
