@@ -420,17 +420,15 @@ def elfparse(binary) -> tuple[dict, bool]:
     with open(binary, "rb") as file:
         try:
             features["ENTROPIES"] = section_entropy(file)
-            features.update(file_header(file))
-            features.update(section_headers(file))
-            features.update(program_headers(file))
-            features.update(dynamic_section(file))
+            features["HEADER"] = file_header(file)
+            features["SECTIONS"] = section_headers(file)
+            features["SEGMENTS"] = program_headers(file)
+            features["DYNAMIC"]  = dynamic_section(file)
             features.update(symbol_tables(file))
             features.update(notes(file))
         except elftools.common.exceptions.ELFParseError:
             _log("W", "ELFParseError caught")
             return (features, True)
-        except:
-            raise Exception("ELF file extraction failure")
 
     return (features, False)
 
