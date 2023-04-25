@@ -207,7 +207,6 @@ class BinSniff():
             except:
                 errorpeparse = True
 
-
         try:
             (self.features["CODE"], errorassemparse) = assemparse(self.binary, self.timeout)
         except:
@@ -224,8 +223,19 @@ class BinSniff():
         if not self.features:
             ret = self.extract_features()
 
-        with open(f"{self.output}/{self.output_name}", "w") as file:
-            features = json.dumps(self.features, indent = 4)
+        output_path = f"{self.output}/{self.output_name}"
+
+        if os.path.exists(output_path):
+            with open(output_path, "r") as file:
+                existing_data = json.load(file)
+
+            # update the existing dictionary with new data
+            existing_data.update(self.features)
+            self.features = existing_data
+
+        with open(output_path, "w") as file:
+            features = json.dumps(self.features, indent=4)
             file.write(features)
 
         return ret
+
