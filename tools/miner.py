@@ -42,6 +42,9 @@ parser.add_argument("-t", "--time", default=None,
 parser.add_argument("-d", "--discard", default = False, action='store_true',
                     help = "Discard errored binaries and write path in error.txt file")
 
+parser.add_argument("--only-static", default = False, action='store_true', dest="static",
+                    help = "If this flag is set, not will be executed Angr.")
+
 arguments = parser.parse_args()
 
 """
@@ -57,6 +60,11 @@ Hierarchy of folders
 # Preparing Environment
 input_folder = os.path.abspath(arguments.input)
 output_folder = os.path.abspath(arguments.output)
+
+if arguments.static:
+    static = input("Execute only with static analysis (y/[n]):")
+    if static.strip() != "y":
+        sys.exit(0)
 
 timeout = None
 if arguments.time is not None:

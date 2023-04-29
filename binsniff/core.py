@@ -122,6 +122,7 @@ class BinSniff():
             verbosity = 0,
             hardcode = {},
             timeout=None,
+            only_static = False,
             ):
         """
         Initializes the `BinSniff` instance.
@@ -150,6 +151,7 @@ class BinSniff():
         self.output = output
 
         self.timeout = timeout
+        self.only_static = only_static
 
     def list_features(self) -> list:
         """
@@ -206,6 +208,10 @@ class BinSniff():
                 self.features["STATIC"] = peparse(self.binary)
             except:
                 errorpeparse = True
+
+        if self.only_static:
+            errors = errorassemparse or errorelfparse or errorpeparse or errorsecparse
+            return (self.features, errors)
 
         try:
             (self.features["CODE"], errorassemparse) = assemparse(self.binary, self.timeout)
