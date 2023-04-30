@@ -2,6 +2,7 @@ from .elfparser import elfparse, elfsecparse
 from .peparser import peparse
 from .assemparser import assemparse
 
+import lz4.frame
 import IPython
 import json
 
@@ -118,7 +119,7 @@ class BinSniff():
             self,
             binary,
             output,
-            output_name = "features.json",
+            output_name = "features.json.lz4",
             verbosity = 0,
             hardcode = {},
             timeout=None,
@@ -223,7 +224,7 @@ class BinSniff():
 
     def dump_json(self):
         """
-        Dumps the extracted features as a JSON file to the specified directory.
+        Dumps the extracted features as a compressed file to the specified directory.
         """
         ret = (None, False)
         if not self.features:
@@ -231,17 +232,19 @@ class BinSniff():
 
         output_path = f"{self.output}/{self.output_name}"
 
+
         if os.path.exists(output_path):
-            with open(output_path, "r") as file:
-                existing_data = json.load(file)
+            with lz4.frame.open(output_path, "rb") as file:
+                existing_data = json.loads(lz4.frame.decompress(file.read()))
 
             # update the existing dictionary with new data
             existing_data.update(self.features)
             self.features = existing_data
 
-        with open(output_path, "w") as file:
-            features = json.dumps(self.features, indent=4)
-            file.write(features)
+        with lz4.frame.open(output_path, "wb") as file:
+            json_data = json.dumps(self.features, indent=4)
+            compressed_data = lz4.frame.compress(json_data.encode('utf-8'))
+            file.write(memoryview(compressed_data))
 
         return ret
 
