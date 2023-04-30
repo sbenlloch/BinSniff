@@ -61,7 +61,9 @@ Hierarchy of folders
 input_folder = os.path.abspath(arguments.input)
 output_folder = os.path.abspath(arguments.output)
 
+only_static = False
 if arguments.static:
+    only_static = True
     static = input("Execute only with static analysis (y/[n]):")
     if static.strip() != "y":
         sys.exit(0)
@@ -104,7 +106,7 @@ _log("I", f"Start sniffing in {input_folder}")
 def sniffing(timeout, file, hardcode, output, conn):
     try:
 
-        sniffer = BinSniff(file, output, hardcode = hardcode, timeout=timeout)
+        sniffer = BinSniff(file, output, hardcode = hardcode, timeout=timeout, only_static=only_static)
 
         # Dump json
         _log("W", "Parsing file")
