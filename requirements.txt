@@ -1,4 +1,6 @@
 angr==9.2.38
+r2pipe==1.8.0
+lz4==4.3.2
 pyelftools==0.29
 pwn==1.0
 pynvim==0.4.3   # For development purpose
