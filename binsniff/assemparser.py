@@ -1,9 +1,6 @@
 import collections
-import datetime
-import binascii
 import hashlib
 import signal
-import re
 
 import angr
 
@@ -76,136 +73,6 @@ def extract_program_instruction_features(cfg) -> dict:
         'inst_type_freq': inst_type_freq,
     }
 
-def get_strings(project, debug=False) -> list:
-
-    # Avoiding duplicates
-    strings_vault = set()
-
-    # Taking into account only .rodata
-
-    # Read .rodata if exists
-    if '.rodata' in project.loader.main_object.sections_map:
-        rodata_addr = project.loader.main_object.sections_map['.rodata'].vaddr
-        rodata_size = project.loader.main_object.sections_map['.rodata'].memsize
-        rodata_contents = project.loader.memory.load(rodata_addr, rodata_size)
-        strings = rodata_contents.split(b'\x00')
-        for string in strings:
-            if not string:
-                continue
-
-            try:
-
-                strings_vault.add(string.decode('utf-8'))
-                if debug: print(string.decode('utf-8'), end='')
-
-            except UnicodeDecodeError:
-
-                hex_data = binascii.hexlify(string)
-                strings_vault.add(str(hex_data))
-                if debug: print(hex_data)
-
-
-    # Taking all the file
-
-    # Read all the file
-    binary_start = project.loader.main_object.min_addr
-    binary_end = project.loader.main_object.max_addr
-    binary_contents = project.loader.memory.load(binary_start,
-                                                    binary_end - binary_start)
-
-    # Finging with regex
-    ascii_regex = b'[\x20-\x7E]+'
-    matches = re.findall(ascii_regex, binary_contents)
-    for string in matches:
-        if not string:
-            continue
-        try:
-
-            strings_vault.add(string.decode('utf-8'))
-            if debug: print(string.decode('utf-8'))
-
-        except UnicodeDecodeError:
-            pass
-
-    return list(strings_vault)
-
-"""
-Based on string extracion, make a intelligence extraction
-"""
-
-def extract_emails(strings) -> list:
-    pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'  # regular expression pattern for email addresses
-    emails = set()  # use set to avoid duplicates
-
-    for string in strings:
-        matches = re.findall(pattern, string)
-        emails.update(matches)
-
-    return list(emails)
-
-def extract_file_paths(strings) -> list:
-    # Compile regular expression pattern to match file paths
-    pattern = re.compile(r"/[\w/.\\-]+")
-    file_paths = []
-
-    for info in strings:
-
-        # Extract file paths from the text
-        file_paths += pattern.findall(info)
-
-    return list(set(file_paths))
-
-def extract_links(strings) -> list:
-    pattern = r'\b((?:https?://|www\.)\S+)\b'  # regular expression pattern for internet links
-    links = set()  # use set to avoid duplicates
-
-    for string in strings:
-        matches = re.findall(pattern, string)
-        links.update(matches)
-
-    return list(links)
-
-def extract_ips(strings) -> list:
-    """
-    Extracts IP addresses from a given text.
-    Returns a set of unique IP addresses.
-    """
-
-    valid_ips = set()
-    for text in strings:
-
-        if isinstance(text, bytes):
-            text = text.decode('utf-8')
-
-        ip_pattern = r"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b"
-        ips = set(re.findall(ip_pattern, text))
-        for ip in ips:
-            octets = ip.split('.')
-            if all(0 <= int(octet) < 256 for octet in octets):
-                valid_ips.add(ip)
-
-    return list(valid_ips)
-
-def extract_years(strings) -> list:
-    current_year = datetime.datetime.now().year
-    years = set()
-
-    for string in strings:
-        # Use re.search to find the first occurrence of a four-digit year in the string
-        m = re.search(r'\b\d{4}\b', string)
-
-        if m:
-            year = int(m.group())
-
-            # Check if the year is within a reasonable range (e.g., 1900 to current year + 10)
-            if 1900 <= year <= current_year + 10:
-                # Append the year to the list if it is not already in the list
-                if year not in years:
-                    years.add(year)
-
-    return list(years)
-
-
 class TimeoutError(Exception):
     pass
 
@@ -248,17 +115,6 @@ def assemparse(binary, timeout) -> tuple[dict, bool]:
 
     features = {}
     project = angr.Project(binary, auto_load_libs = False)
-
-    # Extract strings
-    strings = get_strings(project)
-    features["STRINGS"] = strings
-    # Extract intelligence from strings
-    features["INTELLIGENCE"] = {}
-    features["INTELLIGENCE"]["files"] = extract_file_paths(strings)
-    features["INTELLIGENCE"]["emails"] = extract_emails(strings)
-    features["INTELLIGENCE"]["links"] = extract_links(strings)
-    features["INTELLIGENCE"]["years"] = extract_years(strings)
-    features["INTELLIGENCE"]["IPs"] = extract_ips(strings)
 
     # Get CFG
     try:
