@@ -1,5 +1,5 @@
 # BinSniff
-![Python package](https://github.com/sg1o/BinSniff/actions/workflows/python-package.yml/badge.svg)
+![Python package](https://github.com/sg1o/BinSniff/actions/workflows/python-app.yml/badge.svg)
 ![Python 3.10](https://img.shields.io/badge/Python-3.10-3776AB?logo=python&logoColor=white)
 ![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
 ![Tested on Ubuntu Latest](https://img.shields.io/badge/Tested%20on-Ubuntu%20Latest-E95420?logo=ubuntu&logoColor=white)
