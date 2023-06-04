@@ -213,7 +213,7 @@ class BinSniff():
                 errorpeparse = True
 
         try:
-            self.features["COMMON"] = common_features(self.binary)
+            self.features["COMMON"], errorstrings = common_features(self.binary)
         except:
             errorstrings = True
 
