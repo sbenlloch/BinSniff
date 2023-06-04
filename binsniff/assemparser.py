@@ -1,4 +1,4 @@
-import collections
+mport collections
 import hashlib
 import signal
 
