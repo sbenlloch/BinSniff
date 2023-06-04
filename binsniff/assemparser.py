@@ -103,7 +103,7 @@ def assemparse(binary, timeout) -> tuple[dict, bool]:
     """
     Extract features from binary using Angr.
 
-    Extract features from program from functions, strings and CFG.
+    Extract features from program from functions, CFG.
 
     Args:
         binary (str): Path of the Binary file to parse.
@@ -126,13 +126,10 @@ def assemparse(binary, timeout) -> tuple[dict, bool]:
         if cfg is None:
             raise Exception
     except angr.errors.AngrCFGError:
-        _log("W", "AngrCFGError caught, returning only STRINGS features")
         return (features, True)
     except TimeoutError:
-        _log("E", "Timeout in CFG caught, returning only STRINGS features")
         return (features, True)
-    except Exception as e:
-        _log("E", f"{type(e).__name__} caught, returning only STRINGS features")
+    except Exception:
         return (features, True)
 
     features["INSTS_STATS" ] = extract_program_instruction_features(cfg)
