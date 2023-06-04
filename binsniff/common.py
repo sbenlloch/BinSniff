@@ -1,8 +1,6 @@
-
 import collections
 import datetime
 import hashlib
-import r2pipe
 import re
 
 def get_strings(file_path, min_length=1):
@@ -148,6 +146,7 @@ Assembly code related features
 """
 
 def get_function_disassembly(binary_path) -> list:
+    import r2pipe
     r2 = r2pipe.open(binary_path, flags=['-2'])
     r2.cmd('aaa')  # Run automatic analysis
 
