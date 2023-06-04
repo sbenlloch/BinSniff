@@ -1,6 +1,7 @@
 from .elfparser import elfparse, elfsecparse
 from .peparser import peparse
 from .assemparser import assemparse
+from .common import common_features
 
 import lz4.frame
 import IPython
@@ -180,6 +181,7 @@ class BinSniff():
         errorelfparse = False
         errorsecparse = False
         errorpeparse = False
+        errorstrings = False
 
         if self.features:
             return self.features
@@ -210,8 +212,13 @@ class BinSniff():
             except:
                 errorpeparse = True
 
+        try:
+            self.features["COMMON"] = common_features(self.binary)
+        except:
+            errorstrings = True
+
         if self.only_static:
-            errors = errorassemparse or errorelfparse or errorpeparse or errorsecparse
+            errors = errorassemparse or errorelfparse or errorpeparse or errorsecparse or errorstrings
             return (self.features, errors)
 
         try:
@@ -219,7 +226,7 @@ class BinSniff():
         except:
             errorassemparse = True
 
-        errors = errorassemparse or errorelfparse or errorpeparse or errorsecparse
+        errors = errorassemparse or errorelfparse or errorpeparse or errorsecparse or errorstrings
         return (self.features, errors)
 
     def dump_json(self):
