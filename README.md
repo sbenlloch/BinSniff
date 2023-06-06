@@ -1,64 +1,67 @@
-# BinSniff
+# 🧩 BinSniff
 ![Python package](https://github.com/sg1o/BinSniff/actions/workflows/python-app.yml/badge.svg)
 ![Python 3.10](https://img.shields.io/badge/Python-3.10-3776AB?logo=python&logoColor=white)
 ![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
 ![Tested on Ubuntu Latest](https://img.shields.io/badge/Tested%20on-Ubuntu%20Latest-E95420?logo=ubuntu&logoColor=white)
 
-Characteristic extractor for binaries
+🔎🔍 **BinSniff**: An insightful characteristic extractor for binary files
 
-This repo is included in a big project to automatize dataset creation to make ML more easy in low level security.
+This repository is part of a larger project aimed at simplifying machine learning in low-level security by automating dataset creation.
 
-# BinSniff
+## 💡 What is BinSniff?
 
-BinSniff is a program designed for extracting features from binary files.
-It is a lightweight and easy-to-use tool that can help you analyze binary files
-and identify important characteristics such as file format, headers, function calls, and more.
+BinSniff is a nimble tool designed for extracting informative features from binary files. With BinSniff, you can analyze binary files and identify crucial characteristics, such as file format, headers, imported functions, assembly of functions, VEX code of functions, and mnemonics statistics.
 
-## Installation
+## ⚙️ Installation
 
-BinSniff can be installed on Linux, macOS or Windows using WSL.
-To install it, simply clone the repo and run septup.pu installation.
-```
-pip install -e .
-```
+BinSniff is compatible with Linux, macOS, and Windows (using WSL). Follow these simple steps to install:
 
-## Usage
+1. Clone the repository.
+2. Run the setup.py installation script with `pip install -e .`.
 
-To use BinSniff, open a terminal or command prompt and navigate to the directory where you extracted the files.
-Then, run the `binsniff` command followed by the path to the binary file you want to analyze. For example:
+## 🚀 Usage
 
-```
-$ binsniff /path/to/binary.exe
+To utilize BinSniff, navigate to the directory where you've stored the files. Then, invoke the `binsniff` command with the necessary options.
+
+Here's an example:
+
+```bash
+$ binsniff -b /path/to/binary.exe -o /path/to/output
 ```
 
+The `-b` flag indicates the path to the binary file to be analyzed, and `-o` specifies where to store the output JSON file.
 
-BinSniff will extract the default features from the binary file and display them in the terminal.
-You can also specify which features you want to extract by using the `--features`
-option followed by a comma-separated list of feature names. For example:
+Additional flags include:
 
-```
-$ binsniff /path/to/binary.exe --features=format,headers,functions
-```
+- `-j` or `--json-name`: Set a custom name for the output JSON file. Defaults to `features.json`.
+- `--harcode`: Pass a json file to convert to a dictionary and hardcode specific values into the output JSON file.
 
-This will extract the file format, headers, and function calls from the binary file.
+## ⛏️ Miner
 
-## Features
+A utility named `miner.py` is included within the `tools` directory. It allows you to extract features from multiple binaries within a directory.
 
-BinSniff supports a variety of features, including: (CHANGE TO REALISTIC FEATURES)
+## 📚 Features
 
-- **format**: The file format of the binary file (ELF, PE, Mach-O, etc.).
-- **headers**: The headers of the binary file (DOS header, PE header, etc.).
-- **imports**: The imported functions of the binary file.
-- **exports**: The exported functions of the binary file.
-- **functions**: The function calls of the binary file.
-- **strings**: The ASCII and Unicode strings of the binary file.
-- **sections**: The sections of the binary file.
+BinSniff can extract a plethora of informative features:
 
-## Contributing
+- **strings**: ASCII and Unicode strings within the binary file.
+- **sections**: Detailed information about the binary file's sections.
+- **imports**: Functions imported by the binary file.
+- **headers**: Headers within the binary file.
+- **assembly**: Assembly of functions in the binary file.
+- **vex**: VEX code of functions within the binary file.
+- **mnemonics**: Mnemonics statistics in the binary file.
 
-If you find a bug or have a feature request, please [open an issue](https://github.com/sg1o/binsniff/issues).
-If you would like to contribute to the development of BinSniff, please **fork the repository** and submit a pull request.
+BinSniff supports ELF and PE file formats for feature extraction.
 
-## License
+## 🤝 Contributing
+
+Bug reports and feature requests are welcome! Please [open an issue](https://github.com/sg1o/binsniff/issues). If you're interested in contributing directly to BinSniff's development, kindly **fork the repository** and submit a pull request.
+
+## 📄 License
 
 BinSniff is licensed under the [GPLv3 License](https://github.com/sg1o/binsniff/blob/main/LICENSE).
+
+## ⚠️ Warning
+
+🚧 Please note, this repository is a prototype and forms part of a master's thesis work. It is under active development, so you might encounter bugs and incomplete features. We highly appreciate your patience and encourage you to report any issues or suggest improvements.
