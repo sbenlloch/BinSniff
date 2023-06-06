@@ -14,7 +14,7 @@ BinSniff is a nimble tool designed for extracting informative features from bina
 
 ## ⚙️ Installation
 
-BinSniff is compatible with Linux, macOS, and Windows (using WSL). Follow these simple steps to install:
+BinSniff has been tested on Ubuntu 22.04 LTS. Follow these simple steps to install:
 
 1. Clone the repository.
 2. Run the setup.py installation script with `pip install -e .`.
