@@ -4,6 +4,8 @@
 ![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
 ![Tested on Ubuntu Latest](https://img.shields.io/badge/Tested%20on-Ubuntu%20Latest-E95420?logo=ubuntu&logoColor=white)
 
+> **Warning** Please note, this repository is a prototype and forms part of a master's thesis work. It is under active development, so you might encounter bugs and incomplete features. We highly appreciate your patience and encourage you to report any issues or suggest improvements.
+
 🔎🔍 **BinSniff**: An insightful characteristic extractor for binary files
 
 This repository is part of a larger project aimed at simplifying machine learning in low-level security by automating dataset creation.
@@ -61,7 +63,3 @@ Bug reports and feature requests are welcome! Please [open an issue](https://git
 ## 📄 License
 
 BinSniff is licensed under the [GPLv3 License](https://github.com/sg1o/binsniff/blob/main/LICENSE).
-
-## ⚠️ Warning
-
-🚧 Please note, this repository is a prototype and forms part of a master's thesis work. It is under active development, so you might encounter bugs and incomplete features. We highly appreciate your patience and encourage you to report any issues or suggest improvements.
